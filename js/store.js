@@ -15,7 +15,7 @@ export const store = {
 
   async init() {
     await openDB();
-    this.restore();
+    await this.restore();
   },
 
   set(partial) {
@@ -42,21 +42,25 @@ export const store = {
     if (config) dbSet('config', config);
   },
 
-  restore() {
-    const user = JSON.parse(localStorage.getItem('ot_user') || 'null');
-    const repo = JSON.parse(localStorage.getItem('ot_repo') || 'null');
-    const lastSeenSha = localStorage.getItem('ot_lastSha');
-    const userPrefs = JSON.parse(localStorage.getItem('ot_prefs') || 'null');
-    if (user) this.state.user = user;
-    if (repo) this.state.repo = repo;
-    if (lastSeenSha) this.state.lastSeenSha = lastSeenSha;
-    if (userPrefs) this.state.userPrefs = { ...this.state.userPrefs, ...userPrefs };
+async restore() {
+  const user = JSON.parse(localStorage.getItem('ot_user') || 'null');
+  const repo = JSON.parse(localStorage.getItem('ot_repo') || 'null');
+  const lastSeenSha = localStorage.getItem('ot_lastSha');
+  const userPrefs = JSON.parse(localStorage.getItem('ot_prefs') || 'null');
+  if (user) this.state.user = user;
+  if (repo) this.state.repo = repo;
+  if (lastSeenSha) this.state.lastSeenSha = lastSeenSha;
+  if (userPrefs) this.state.userPrefs = { ...this.state.userPrefs, ...userPrefs };
 
-    // Restore heavy data from IndexedDB (async)
-    dbGet('tasks').then(t => { if (t) this.state.tasks = t; });
-    dbGet('events').then(e => { if (e) this.state.events = e; });
-    dbGet('config').then(c => { if (c) this.state.config = c; });
-  },
+  const [tasks, events, config] = await Promise.all([
+    dbGet('tasks'),
+    dbGet('events'),
+    dbGet('config'),
+  ]);
+  if (tasks) this.state.tasks = tasks;
+  if (events) this.state.events = events;
+  if (config) this.state.config = config;
+},
 
   async clear() {
     localStorage.clear();
