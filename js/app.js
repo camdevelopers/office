@@ -6,38 +6,28 @@ const app = {
   route: 'dashboard',
   selectedTask: null,
 
-  init() {
-    store.restore();
-    this.bindVisibility();
-    this.render();
+async init() {
+  await store.init();  // opens DB + restores from IndexedDB
+  this.bindVisibility();
+  this.render();        // renders instantly from local data
 
-    if (store.state.user) {
-      this.sync();
-    }
+  if (store.state.user) {
+    this.sync();        // then checks for remote changes
+  }
 
-    // Register service worker
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('./sw.js').catch(() => {});
-    }
-  },
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js').catch(() => {});
+  }
+},
 
-  bindVisibility() {
-    const doSync = () => { if (store.state.user) this.sync(); };
-    document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'visible') doSync();
-    });
-    window.addEventListener('pageshow', doSync);
-    window.addEventListener('focus', doSync);
-  },
-
-  async sync() {
-    try {
-      await api.sync();
-      this.render();
-    } catch (e) {
-      console.warn('Sync failed:', e.message);
-    }
-  },
+async sync() {
+  try {
+    const changed = await api.sync();
+    if (changed) this.render();  // only re-render if new data arrived
+  } catch (e) {
+    console.warn('Sync failed:', e.message);
+  }
+},
 
   render() {
     const app = document.getElementById('app');
