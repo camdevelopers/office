@@ -6,61 +6,70 @@ const app = {
   route: 'dashboard',
   selectedTask: null,
 
-async init() {
-  await store.init();  // opens DB + restores from IndexedDB
-  this.bindVisibility();
-  this.render();        // renders instantly from local data
+  async init() {
+    await store.init();
+    this.bindVisibility();
+    this.render();
 
-  if (store.state.user) {
-    this.sync();        // then checks for remote changes
-  }
+    if (store.state.user) {
+      this.sync();
+    }
 
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./sw.js').catch(() => {});
-  }
-},
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('./sw.js').catch(() => {});
+    }
+  },
 
-async sync() {
-  try {
-    const changed = await api.sync();
-    if (changed) this.render();  // only re-render if new data arrived
-  } catch (e) {
-    console.warn('Sync failed:', e.message);
-  }
-},
+  bindVisibility() {
+    const doSync = () => { if (store.state.user) this.sync(); };
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') doSync();
+    });
+    window.addEventListener('pageshow', doSync);
+    window.addEventListener('focus', doSync);
+  },
+
+  async sync() {
+    try {
+      const changed = await api.sync();
+      if (changed) this.render();
+    } catch (e) {
+      console.warn('Sync failed:', e.message);
+    }
+  },
 
   render() {
-    const app = document.getElementById('app');
+    const appEl = document.getElementById('app');
     const { user } = store.state;
 
     if (!user) {
-      app.innerHTML = renderSignIn();
+      appEl.innerHTML = renderSignIn();
       this.bindSignIn();
       return;
     }
 
     switch (this.route) {
       case 'dashboard':
-        app.innerHTML = renderDashboard(store.state);
+        appEl.innerHTML = renderDashboard(store.state);
         this.bindCardActions();
         break;
       case 'add':
-        app.innerHTML = renderAddTask(store.state);
+        appEl.innerHTML = renderAddTask(store.state);
         this.onTypeChange();
         break;
       case 'task':
-        app.innerHTML = renderTaskDetail(this.selectedTask, store.state);
+        appEl.innerHTML = renderTaskDetail(this.selectedTask, store.state);
         break;
       case 'settings':
-        app.innerHTML = renderSettings(store.state);
+        appEl.innerHTML = renderSettings(store.state);
         break;
       case 'reports':
-        app.innerHTML = `<div class="topbar"><div class="topbar-logo" onclick="app.navigate('dashboard')" style="cursor:pointer">← Back</div><div class="topbar-logo" style="color:var(--text)">Reports</div><div style="width:48px"></div></div><div class="empty-state"><div class="emoji">📊</div>Reports coming soon.</div>`;
+        appEl.innerHTML = `<div class="topbar"><div class="topbar-logo" onclick="app.navigate('dashboard')" style="cursor:pointer">← Back</div><div class="topbar-logo" style="color:var(--text)">Reports</div><div style="width:48px"></div></div><div class="empty-state"><div class="emoji">📊</div>Reports coming soon.</div>`;
         break;
     }
   },
 
-   bindSignIn() {
+  bindSignIn() {
     document.getElementById('si-btn')?.addEventListener('click', async () => {
       const name = document.getElementById('si-name').value.trim();
       const pat = document.getElementById('si-pat').value.trim();
@@ -97,7 +106,6 @@ async sync() {
       }
     });
 
-    // Enter key support
     document.getElementById('si-pat')?.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') document.getElementById('si-btn')?.click();
     });
@@ -130,7 +138,6 @@ async sync() {
 
     try {
       await api.appendEvent(event);
-      // Bounce animation on the card
       const card = document.querySelector(`[data-task-id="${taskId}"]`);
       if (card) {
         card.classList.add('bounce');
@@ -242,7 +249,6 @@ async sync() {
 
     container.innerHTML = fields[type] || '';
 
-    // Sub-fields for calendar
     if (type === 'calendar') {
       const freqSelect = document.getElementById('cal-freq');
       const subContainer = document.getElementById('cal-sub-fields');
@@ -388,8 +394,6 @@ async sync() {
 
     store.set({ config: { ...config, workdays } });
     el.classList.toggle('active');
-
-    // Persist to repo
     this._saveConfig();
   },
 
@@ -402,7 +406,7 @@ async sync() {
 
   async _saveConfig() {
     try {
-      const { config, repo } = store.state;
+      const { config } = store.state;
       const meta = await api.getFileMeta('config.json').catch(() => null);
       await api.pushFile(
         'config.json',
@@ -422,7 +426,6 @@ async sync() {
     this.render();
   },
 
-  // Card action delegation
   bindCardActions() {
     document.querySelectorAll('.action-btn[data-action]')?.forEach(btn => {
       btn.addEventListener('click', (e) => {
@@ -433,7 +436,6 @@ async sync() {
       });
     });
 
-    // Click card to open detail
     document.querySelectorAll('.task-card')?.forEach(card => {
       card.addEventListener('click', (e) => {
         if (e.target.closest('.action-btn')) return;
@@ -448,6 +450,5 @@ async sync() {
   },
 };
 
-// Expose globally for inline onclick handlers
 window.app = app;
 app.init();   
