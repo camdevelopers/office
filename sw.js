@@ -1,6 +1,6 @@
 const CACHE = 'office-tasks-v1';
 const SHELL = ['./', './index.html', './styles.css', './manifest.json',
-  './js/app.js', './js/store.js', './js/api.js', './js/recurrence.js', './js/render.js'];   
+  './js/app.js', './js/store.js', './js/api.js', './js/recurrence.js', './js/render.js', './js/db.js'];   
 
 self.addEventListener('install', (e) => {
   e.waitUntil(
