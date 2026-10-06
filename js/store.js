@@ -1,15 +1,22 @@
+import { openDB, dbSet, dbGet, dbClear } from './db.js';
+
 export const store = {
   state: {
-    user: null,       // { name, pat }
-    repo: null,       // { owner, name }
+    user: null,
+    repo: null,
     tasks: [],
     events: [],
-    config: { workdays: [1,2,3,4,5,6], holidays: [] },
+    config: { workdays: [1, 2, 3, 4, 5, 6], holidays: [] },
     lastSeenSha: null,
     userPrefs: { collapse_on_complete: false, theme: 'dark' },
   },
 
   listeners: new Set(),
+
+  async init() {
+    await openDB();
+    this.restore();
+  },
 
   set(partial) {
     Object.assign(this.state, partial);
@@ -23,11 +30,16 @@ export const store = {
   },
 
   _persist() {
-    const { user, repo, lastSeenSha, userPrefs } = this.state;
+    const { user, repo, tasks, events, config, lastSeenSha, userPrefs } = this.state;
     if (user) localStorage.setItem('ot_user', JSON.stringify(user));
     if (repo) localStorage.setItem('ot_repo', JSON.stringify(repo));
     if (lastSeenSha) localStorage.setItem('ot_lastSha', lastSeenSha);
     if (userPrefs) localStorage.setItem('ot_prefs', JSON.stringify(userPrefs));
+
+    // Heavy data → IndexedDB
+    if (tasks) dbSet('tasks', tasks);
+    if (events) dbSet('events', events);
+    if (config) dbSet('config', config);
   },
 
   restore() {
@@ -39,13 +51,19 @@ export const store = {
     if (repo) this.state.repo = repo;
     if (lastSeenSha) this.state.lastSeenSha = lastSeenSha;
     if (userPrefs) this.state.userPrefs = { ...this.state.userPrefs, ...userPrefs };
+
+    // Restore heavy data from IndexedDB (async)
+    dbGet('tasks').then(t => { if (t) this.state.tasks = t; });
+    dbGet('events').then(e => { if (e) this.state.events = e; });
+    dbGet('config').then(c => { if (c) this.state.config = c; });
   },
 
-  clear() {
+  async clear() {
     localStorage.clear();
+    await dbClear();
     this.state = {
       user: null, repo: null, tasks: [], events: [],
-      config: { workdays: [1,2,3,4,5,6], holidays: [] },
+      config: { workdays: [1, 2, 3, 4, 5, 6], holidays: [] },
       lastSeenSha: null,
       userPrefs: { collapse_on_complete: false, theme: 'dark' },
     };
