@@ -83,7 +83,7 @@ const app = {
         return;
       }
 
-      const [owner, name: repoName] = repoStr.split('/');
+      const [owner, repoName] = repoStr.split('/');
       if (!owner || !repoName) {
         errEl.textContent = 'Repo format: owner/name';
         return;
