@@ -65,31 +65,31 @@ export const api = {
     return res.json();
   },
 
-  async sync() {
-    const { lastSeenSha } = store.state;
-    const commits = await this.getLatestCommit();
-    const latestSha = commits[0]?.sha;
+async sync() {
+  const { lastSeenSha } = store.state;
+  const commits = await this.getLatestCommit();
+  const latestSha = commits[0]?.sha;
 
-    if (latestSha === lastSeenSha) return false; // no change
+  if (latestSha === lastSeenSha) return false;
 
-    const [tasksRaw, eventsRaw, configRaw] = await Promise.all([
-      this.getFileContent('tasks.json', latestSha).catch(() => '[]'),
-      this.getFileContent('events.json', latestSha).catch(() => '[]'),
-      this.getFileContent('config.json', latestSha).catch(() => '{}'),
-    ]);
+  const [tasksRaw, eventsRaw, configRaw] = await Promise.all([
+    this.getFileContent('tasks.json', latestSha).catch(() => '[]'),
+    this.getFileContent('events.json', latestSha).catch(() => '[]'),
+    this.getFileContent('config.json', latestSha).catch(() => '{}'),
+  ]);
 
-    const tasks = JSON.parse(tasksRaw);
-    const events = JSON.parse(eventsRaw);
-    const config = JSON.parse(configRaw || '{}');
+  const tasks = JSON.parse(tasksRaw);
+  const events = JSON.parse(eventsRaw);
+  const config = JSON.parse(configRaw || '{}');
 
-    store.set({
-      tasks,
-      events,
-      config: { workdays: config.workdays || [1,2,3,4,5,6], holidays: config.holidays || [] },
-      lastSeenSha: latestSha,
-    });
-    return true;
-  },
+  store.set({
+    tasks,
+    events,
+    config: { workdays: config.workdays || [1, 2, 3, 4, 5, 6], holidays: config.holidays || [] },
+    lastSeenSha: latestSha,
+  });
+  return true;
+},   
 
   async appendEvent(event) {
     const { repo, lastSeenSha } = store.state;
